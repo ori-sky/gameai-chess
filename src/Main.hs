@@ -77,9 +77,9 @@ instance UCIRead UCIMessageIn where
     uciRead ["debug", "off"]                   = [UCIDebug (Just False)]
     uciRead ["isready"]                        = [UCIIsReady]
     uciRead ["ucinewgame"]                     = [UCINewGame]
-    uciRead ("position":"fen":fen :"moves":ws) = [UCIPosition  undefined (map parseMove ws)]
-    uciRead ("position":"startpos":"moves":ws) = [UCIPosition (Just def) (map parseMove ws)]
-    uciRead ("position"           :"moves":ws) = [UCIPosition  Nothing   (map parseMove ws)]
+    uciRead ("position":"fen":fen :"moves":ws) = [UCIPosition  undefined (fmap parseMove ws)]
+    uciRead ("position":"startpos":"moves":ws) = [UCIPosition (Just def) (fmap parseMove ws)]
+    uciRead ("position"           :"moves":ws) = [UCIPosition  Nothing   (fmap parseMove ws)]
     uciRead ("go":_)                           = [UCIGo]
     uciRead ws                                 = [UCIUnknown ws]
 
