@@ -101,7 +101,7 @@ receive :: (MonadIO m, UCIRead a) => m [a]
 receive = uciRead . words <$> liftIO getLine
 
 send :: (MonadIO m, UCIShow a) => a -> m ()
-send = traverse_ (liftIO . putStrLn . unwords) . uciShow
+send = liftIO . traverse_ (putStrLn . unwords) . uciShow
 
 main :: IO ()
 main = do
