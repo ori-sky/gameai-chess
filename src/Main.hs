@@ -1,8 +1,15 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import Data.Foldable (traverse_)
 import Data.Default
 import Control.Monad.State
+import Control.Lens (makeFields, (.=), (%=), use)
 import System.IO (BufferMode(..), stdin, stdout, hSetBuffering)
 
 instance (Default a, Default b, Default c, Default d,
@@ -17,8 +24,14 @@ type ChessTile      = Maybe ChessPiece
 type ChessRow       = (ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile)
 type ChessBoard     = (ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow)
 
-data ChessState = ChessState { char  :: Char, board :: ChessBoard }
-instance Default ChessState where def = ChessState { char = 'a', board = def }
+data ChessState = ChessState { _chessStateChar  :: Char
+                             , _chessStateBoard :: ChessBoard
+                             }
+makeFields ''ChessState
+
+instance Default ChessState where def = ChessState { _chessStateChar  = 'a'
+                                                   , _chessStateBoard = def
+                                                   }
 
 type ChessT = StateT ChessState
 type Chess  = State  ChessState
@@ -118,9 +131,9 @@ handleIn  UCIUCI = traverse_ send [UCIID "gameai-chess" "shockk", UCIOK]
 handleIn (UCIDebug _)               = pure ()
 handleIn  UCIIsReady                = send UCIReadyOK
 handleIn  UCINewGame                = pure ()
-handleIn (UCIPosition (Just brd) _) = modify $ \s -> s { board = brd }
+handleIn (UCIPosition (Just brd) _) = board .= brd
 handleIn (UCIPosition  Nothing _)   = pure ()
 handleIn  UCIGo = do
-    gets char >>= \c -> send (UCIBestMove [c, '7', c, '6'] Nothing)
-    modify $ \s -> s { char = succ (char s) }
+    use char >>= \c -> send (UCIBestMove [c, '7', c, '6'] Nothing)
+    char %= succ
 handleIn (UCIUnknown xs) = send (UCIInfo (unwords xs))
