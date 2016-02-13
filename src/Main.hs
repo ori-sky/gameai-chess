@@ -1,15 +1,23 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Main where
 
+import Data.Default
 import Control.Monad.State
 import System.IO (BufferMode(..), stdin, stdout, hSetBuffering)
-import Control.Lens
 
-data ChessState = ChessState { char :: Char }
+instance (Default a, Default b, Default c, Default d,
+          Default e, Default f, Default g, Default h)
+       => Default (a, b, c, d, e, f, g, h) where
+    def = (def, def, def, def, def, def, def, def)
 
-defaultChessState :: ChessState
-defaultChessState = ChessState { char = 'a' }
+data ChessPlayer    = WhitePlayer | BlackPlayer
+data ChessPieceType = Pawn | Rook | Knight | Bishop | Queen | King
+data ChessPiece     = ChessPiece ChessPlayer ChessPieceType
+type ChessTile      = Maybe ChessPiece
+type ChessRow       = (ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile)
+type ChessBoard     = (ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow)
+
+data ChessState = ChessState { char  :: Char, board :: ChessBoard }
+instance Default ChessState where def = ChessState { char = 'a', board = def }
 
 type ChessT = StateT ChessState
 type Chess = State ChessState
@@ -45,13 +53,13 @@ instance UCIShow UCIMessageOut where
     uciShow UCIReadyOK                 = ["readyok"]
     uciShow (UCIBestMove m1 Nothing)   = ["bestmove " ++ m1]
     uciShow (UCIBestMove m1 (Just m2)) = ["bestmove " ++ m1 ++ " ponder " ++ m2]
-    uciShow (UCIInfo xs)               = ["info " ++ xs]
+    uciShow (UCIInfo xs)               = ["info string " ++ xs]
 
 main :: IO ()
 main = do
     hSetBuffering stdin LineBuffering
     hSetBuffering stdout LineBuffering
-    void $ runStateT (forever tick) defaultChessState
+    void $ runStateT (forever tick) def
 
 receive :: (MonadIO m, UCIRead a) => m [a]
 receive = uciRead <$> liftIO getLine
@@ -69,7 +77,7 @@ handleIn UCIUCI = do
     send UCIOK
 handleIn (UCIDebug _) = return ()
 handleIn UCIIsReady = send UCIReadyOK
-handleIn UCINewGame = put defaultChessState
+handleIn UCINewGame = put def
 handleIn (UCIUnknown ('g':'o':' ':_)) = do
     gets char >>= \c -> send (UCIBestMove [c, '7', c, '6'] Nothing)
     modify $ \s -> s { char = succ (char s) }
