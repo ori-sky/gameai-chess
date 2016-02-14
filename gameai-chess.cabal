@@ -5,8 +5,8 @@ version:             0.1.0.0
 license:             PublicDomain
 license-file:        LICENSE
 author:              David Farrell
-maintainer:          shokku.ra@gmail.com
--- copyright:           
+maintainer:          David Farrell <shokku.ra@gmail.com>
+copyright:           Copyright (C) 2016 David Farrell
 -- category:            
 build-type:          Simple
 -- extra-source-files:  
