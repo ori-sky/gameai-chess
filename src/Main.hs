@@ -73,10 +73,10 @@ parseMove [r1, c1, r2, c2] = (parsePos [r1, c1], parsePos [r2, c2])
 parseMove _                = undefined
 
 receive :: MonadIO m => m [UCI.MessageIn]
-receive = UCI.read <$> liftIO getLine
+receive = UCI.readIn <$> liftIO getLine
 
 send :: MonadIO m => UCI.MessageOut -> m ()
-send = liftIO . traverse_ putStrLn . UCI.show
+send = liftIO . traverse_ putStrLn . UCI.showOut
 
 main :: IO ()
 main = do
