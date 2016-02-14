@@ -11,22 +11,11 @@ import Data.Default
 import Control.Monad.State
 import Control.Lens (makeFields, (%=), use)
 import System.IO (BufferMode(..), stdin, stdout, hSetBuffering)
+import qualified Data.Chess as Chess
 import qualified Data.UCI as UCI
 
-instance (Default a, Default b, Default c, Default d,
-          Default e, Default f, Default g, Default h)
-       => Default (a, b, c, d, e, f, g, h) where
-    def = (def, def, def, def, def, def, def, def)
-
-data ChessPlayer    = WhitePlayer | BlackPlayer
-data ChessPieceType = Pawn | Rook | Knight | Bishop | Queen | King
-data ChessPiece     = ChessPiece ChessPlayer ChessPieceType
-type ChessTile      = Maybe ChessPiece
-type ChessRow       = (ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile, ChessTile)
-type ChessBoard     = (ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow,  ChessRow)
-
 data ChessState = ChessState { _chessStateChar  :: Char
-                             , _chessStateBoard :: ChessBoard
+                             , _chessStateBoard :: Chess.Board
                              }
 makeFields ''ChessState
 
