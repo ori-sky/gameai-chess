@@ -88,13 +88,12 @@ tick :: ChessT IO ()
 tick = receive >>= traverse_ handleIn
 
 handleIn :: UCI.MessageIn -> ChessT IO ()
-handleIn  UCI.Quit                   = send (UCI.Info "bye")
 handleIn  UCI.UCI                    = traverse_ send [UCI.ID "gameai-chess" "shockk", UCI.OK]
-handleIn (UCI.Debug _)               = pure ()
+handleIn  UCI.Quit                   = send (UCI.Info "bye")
 handleIn  UCI.IsReady                = send UCI.ReadyOK
 handleIn  UCI.NewGame                = pure ()
 handleIn (UCI.Position _ _)          = pure ()
+handleIn (UCI.Debug _)               = pure ()
 handleIn  UCI.Go = do
     use char >>= \c -> send (UCI.BestMove [c, '7', c, '6'] Nothing)
     char %= succ
-handleIn (UCI.Unknown xs)            = send (UCI.Info (unwords xs))
