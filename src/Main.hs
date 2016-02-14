@@ -9,8 +9,9 @@ module Main where
 import Data.Foldable (traverse_)
 import Data.Default
 import Control.Monad.State
-import Control.Lens (makeFields, (.=), (%=), use)
+import Control.Lens (makeFields, (%=), use)
 import System.IO (BufferMode(..), stdin, stdout, hSetBuffering)
+import qualified Data.UCI as UCI
 
 instance (Default a, Default b, Default c, Default d,
           Default e, Default f, Default g, Default h)
@@ -71,50 +72,11 @@ parseMove :: String -> ChessMove
 parseMove [r1, c1, r2, c2] = (parsePos [r1, c1], parsePos [r2, c2])
 parseMove _                = undefined
 
-class UCIRead a where uciRead :: [String] -> [a]
-class UCIShow a where uciShow :: a -> [[String]]
+receive :: MonadIO m => m [UCI.MessageIn]
+receive = UCI.read <$> liftIO getLine
 
-data UCIMessageIn = UCIUCI
-                  | UCIDebug (Maybe Bool)
-                  | UCIIsReady
-                  | UCINewGame
-                  | UCIPosition (Maybe ChessBoard) [ChessMove]
-                  | UCIGo
-                  | UCIQuit
-                  | UCIUnknown [String]
-
-instance UCIRead UCIMessageIn where
-    uciRead ["uci"]                            = [UCIUCI]
-    uciRead ["debug"]                          = [UCIDebug  Nothing]
-    uciRead ["debug", "on"]                    = [UCIDebug (Just True)]
-    uciRead ["debug", "off"]                   = [UCIDebug (Just False)]
-    uciRead ["isready"]                        = [UCIIsReady]
-    uciRead ["ucinewgame"]                     = [UCINewGame]
-    uciRead ("position":"fen":fen :"moves":ws) = [UCIPosition  undefined (fmap parseMove ws)]
-    uciRead ("position":"startpos":"moves":ws) = [UCIPosition (Just def) (fmap parseMove ws)]
-    uciRead ("position"           :"moves":ws) = [UCIPosition  Nothing   (fmap parseMove ws)]
-    uciRead ("go":_)                           = [UCIGo]
-    uciRead ws                                 = [UCIUnknown ws]
-
-data UCIMessageOut = UCIID String String
-                   | UCIOK
-                   | UCIReadyOK
-                   | UCIBestMove String (Maybe String)
-                   | UCIInfo String
-
-instance UCIShow UCIMessageOut where
-    uciShow (UCIID name author)        = [["id", "name", name], ["id", "author", author]]
-    uciShow UCIOK                      = [["uciok"]]
-    uciShow UCIReadyOK                 = [["readyok"]]
-    uciShow (UCIBestMove m1 Nothing)   = [["bestmove", m1]]
-    uciShow (UCIBestMove m1 (Just m2)) = [["bestmove", m1, "ponder", m2]]
-    uciShow (UCIInfo xs)               = [["info", "string", xs]]
-
-receive :: (MonadIO m, UCIRead a) => m [a]
-receive = uciRead . words <$> liftIO getLine
-
-send :: (MonadIO m, UCIShow a) => a -> m ()
-send = liftIO . traverse_ (putStrLn . unwords) . uciShow
+send :: MonadIO m => UCI.MessageOut -> m ()
+send = liftIO . traverse_ putStrLn . UCI.show
 
 main :: IO ()
 main = do
@@ -125,15 +87,14 @@ main = do
 tick :: ChessT IO ()
 tick = receive >>= traverse_ handleIn
 
-handleIn :: UCIMessageIn -> ChessT IO ()
-handleIn  UCIQuit = send (UCIInfo "bye")
-handleIn  UCIUCI = traverse_ send [UCIID "gameai-chess" "shockk", UCIOK]
-handleIn (UCIDebug _)               = pure ()
-handleIn  UCIIsReady                = send UCIReadyOK
-handleIn  UCINewGame                = pure ()
-handleIn (UCIPosition (Just brd) _) = board .= brd
-handleIn (UCIPosition  Nothing _)   = pure ()
-handleIn  UCIGo = do
-    use char >>= \c -> send (UCIBestMove [c, '7', c, '6'] Nothing)
+handleIn :: UCI.MessageIn -> ChessT IO ()
+handleIn  UCI.Quit                   = send (UCI.Info "bye")
+handleIn  UCI.UCI                    = traverse_ send [UCI.ID "gameai-chess" "shockk", UCI.OK]
+handleIn (UCI.Debug _)               = pure ()
+handleIn  UCI.IsReady                = send UCI.ReadyOK
+handleIn  UCI.NewGame                = pure ()
+handleIn (UCI.Position _ _)          = pure ()
+handleIn  UCI.Go = do
+    use char >>= \c -> send (UCI.BestMove [c, '7', c, '6'] Nothing)
     char %= succ
-handleIn (UCIUnknown xs) = send (UCIInfo (unwords xs))
+handleIn (UCI.Unknown xs)            = send (UCI.Info (unwords xs))
